@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  WORKER
+}
+
+enum EstadoSync {
+  PENDIENTE
+  SINCRONIZADO
+  ERROR
+}
+
+model Usuario {
+  id        Int            @id @default(autoincrement())
+  nombre    String
+  email     String         @unique
+  password  String
+  rol       Rol
+  activo    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  partes    ParteDiario[]  @relation("UsuarioPartes")
+}
+
+model Trabajador {
+  id        Int                    @id @default(autoincrement())
+  nombre    String                 @unique
+  activo    Boolean                @default(true)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  detalles  ParteDiarioDetalle[]
+}
+
+model Actividad {
+  id        Int                    @id @default(autoincrement())
+  nombre    String                 @unique
+  activo    Boolean                @default(true)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  detalles  ParteDiarioDetalle[]
+}
+
+model Predio {
+  id        Int                    @id @default(autoincrement())
+  nombre    String                 @unique
+  activo    Boolean                @default(true)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  detalles  ParteDiarioDetalle[]
+}
+
+model ParteDiario {
+  id                   Int                   @id @default(autoincrement())
+  localId              String?               @unique
+  fecha                DateTime
+  dia                  String
+  creadoPorId          Int
+  estadoSync           EstadoSync            @default(PENDIENTE)
+  syncedToGoogleSheet  Boolean               @default(false)
+  googleSheetRowId     String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  creadoPor            Usuario               @relation("UsuarioPartes", fields: [creadoPorId], references: [id])
+  detalles             ParteDiarioDetalle[]
+}
+
+model ParteDiarioDetalle {
+  id            Int          @id @default(autoincrement())
+  parteDiarioId  Int
+  trabajadorId   Int
+  actividadId    Int
+  predioId       Int
+  horas         Decimal      @db.Decimal(10, 2)
+  total         Decimal      @db.Decimal(10, 2)
+  observaciones String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  parteDiario   ParteDiario  @relation(fields: [parteDiarioId], references: [id], onDelete: Cascade)
+  trabajador    Trabajador   @relation(fields: [trabajadorId], references: [id])
+  actividad     Actividad    @relation(fields: [actividadId], references: [id])
+  predio        Predio       @relation(fields: [predioId], references: [id])
+}
