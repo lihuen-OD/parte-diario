@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../components/Toast';
+import { apiRootUrl } from '../api/axios';
 
 export default function LoginPage() {
   const { login, user, token } = useAuth();
@@ -11,6 +12,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [serverReady, setServerReady] = useState(false);
+  const [checkingServer, setCheckingServer] = useState(true);
 
   useEffect(() => {
     if (token && user) {
@@ -58,10 +61,7 @@ export default function LoginPage() {
           {error ? <div className="error">{error}</div> : null}
           <button className="btn btn-primary" type="submit" disabled={loading}>{loading ? 'Ingresando...' : 'Ingresar'}</button>
         </form>
-        <div className="muted" style={{ marginTop: 16, fontSize: 13 }}>
-          Admin: admin@partediario.com / admin123<br />
-          Worker: worker@partediario.com / worker123
-        </div>
+        
       </div>
     </div>
   );

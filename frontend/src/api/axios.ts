@@ -4,6 +4,8 @@ export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api',
 });
 
+export const apiRootUrl = api.defaults.baseURL?.replace(/\/api\/?$/, '') ?? '';
+
 let unauthorizedHandler: (() => void) | null = null;
 
 api.interceptors.response.use(
