@@ -9,6 +9,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(1, 'JWT_SECRET es obligatorio'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
+  FRONTEND_URLS: z.string().optional().default(''),
   GOOGLE_SHEETS_ENABLED: z
     .union([z.string(), z.boolean()])
     .optional()

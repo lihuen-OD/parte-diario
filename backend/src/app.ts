@@ -13,8 +13,14 @@ import { errorMiddleware } from './middlewares/error.middleware';
 
 export const app = express();
 
+function normalizeOrigin(origin: string) {
+  return origin.trim().replace(/\/$/, '');
+}
+
+const configuredOrigins = [env.FRONTEND_URL, ...env.FRONTEND_URLS.split(',')].filter(Boolean);
+
 const allowedOrigins = new Set([
-  env.FRONTEND_URL,
+  ...configuredOrigins.map(normalizeOrigin),
   'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5173',
@@ -23,7 +29,7 @@ const allowedOrigins = new Set([
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.has(origin)) {
+    if (!origin || allowedOrigins.has(normalizeOrigin(origin))) {
       callback(null, true);
       return;
     }
