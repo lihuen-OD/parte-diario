@@ -71,6 +71,8 @@ button { cursor: pointer; }
 .toast.success { border-left: 6px solid var(--verde); }
 .toast.error { border-left: 6px solid #b02b42; }
 .toast.info { border-left: 6px solid var(--rojo); }
+.server-wake-card { display: grid; gap: 6px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #e7d39a; border-left: 6px solid #d6a526; border-radius: 8px; background: #fff8df; color: #4d3a07; }
+.server-wake-card span { color: #6b5a27; font-size: 0.92rem; }
 
 @media (max-width: 719px) {
   .two-col { grid-template-columns: 1fr !important; }

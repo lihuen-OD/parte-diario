@@ -21,6 +21,38 @@ export default function LoginPage() {
     }
   }, [navigate, token, user]);
 
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId: number | undefined;
+
+    async function checkServer() {
+      setCheckingServer(true);
+
+      try {
+        const response = await fetch(`${apiRootUrl}/health`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Servidor no disponible');
+
+        if (!cancelled) {
+          setServerReady(true);
+          setCheckingServer(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setServerReady(false);
+          setCheckingServer(false);
+          timeoutId = window.setTimeout(checkServer, 5000);
+        }
+      }
+    }
+
+    void checkServer();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, []);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError('');
@@ -32,8 +64,10 @@ export default function LoginPage() {
       navigate(current.rol === 'ADMIN' ? '/admin' : '/parte-diario', { replace: true });
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'No se pudo iniciar sesión';
-      setError(message);
-      pushToast(message, 'error');
+      const isNetworkError = message === 'Network Error' || message.includes('timeout');
+      const nextMessage = isNetworkError ? 'Cargando servidor, espere unos minutos e intentá nuevamente.' : message;
+      setError(nextMessage);
+      pushToast(nextMessage, isNetworkError ? 'info' : 'error');
     } finally {
       setLoading(false);
     }
@@ -49,6 +83,12 @@ export default function LoginPage() {
           </div>
           <p className="muted" style={{ margin: 0 }}>Accedé con tu usuario ADMIN o WORKER</p>
         </div>
+        {!serverReady && (
+          <div className="server-wake-card">
+            <strong>{checkingServer ? 'Cargando servidor' : 'Esperando servidor'}</strong>
+            <span>Render puede demorar unos minutos en despertar. Dejá esta pantalla abierta; se habilita solo cuando el servidor responda.</span>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="grid">
           <div className="field">
             <label>Email</label>
@@ -59,7 +99,7 @@ export default function LoginPage() {
             <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="********" />
           </div>
           {error ? <div className="error">{error}</div> : null}
-          <button className="btn btn-primary" type="submit" disabled={loading}>{loading ? 'Ingresando...' : 'Ingresar'}</button>
+          <button className="btn btn-primary" type="submit" disabled={loading || !serverReady}>{loading ? 'Ingresando...' : serverReady ? 'Ingresar' : 'Esperando servidor...'}</button>
         </form>
         
       </div>
