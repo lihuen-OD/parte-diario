@@ -86,7 +86,7 @@ export default function LoginPage() {
         {!serverReady && (
           <div className="server-wake-card">
             <strong>{checkingServer ? 'Cargando servidor' : 'Esperando servidor'}</strong>
-            <span>Render puede demorar unos minutos en despertar. Dejá esta pantalla abierta; se habilita solo cuando el servidor responda.</span>
+            <span>Estamos obteniendo la información del servidor. Este proceso puede demorar unos minutos. Dejá esta pantalla abierta; se habilitará automáticamente cuando la información esté cargada.</span>
           </div>
         )}
         <form onSubmit={handleSubmit} className="grid">
