@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const decimalNonNegative = (message: string) =>
+  z.coerce.number().refine((value) => value >= 0, { message });
+
 const decimalPositive = (message: string) =>
   z.coerce.number().refine((value) => value > 0, { message });
 
@@ -11,8 +14,8 @@ export const detalleSchema = z.object({
   trabajadorId: z.coerce.number().int().positive('El trabajador es obligatorio'),
   actividadId: z.coerce.number().int().positive('La actividad es obligatoria'),
   predioId: z.coerce.number().int().positive('El predio es obligatorio'),
-  horas: decimalPositive('Las horas deben ser mayores a 0'),
-  total: decimalPositive('El total debe ser mayor a 0'),
+  horas: decimalNonNegative('Las horas deben ser 0 o mayores'),
+  total: decimalNonNegative('El total debe ser 0 o mayor'),
   observaciones: z.string().optional().default(''),
 });
 

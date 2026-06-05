@@ -42,12 +42,12 @@ export function ParteRow({ index, value, trabajador, touched, errors, actividade
         <div className="two-col">
           <div className="field">
             <label>Horas</label>
-            <input className="input" type="number" min="0" step="0.5" value={value.horas || ''} onChange={(e) => set({ horas: Number(e.target.value) })} />
+            <input className="input" type="number" min="0" step="0.5" value={value.horas ?? ''} onChange={(e) => set({ horas: Number(e.target.value) })} />
             {touched && <FieldError message={errors[`detalles.${index}.horas`]} />}
           </div>
           <div className="field">
             <label>Total</label>
-            <input className="input" type="number" min="0" step="0.5" value={value.total || ''} onChange={(e) => set({ total: Number(e.target.value) })} />
+            <input className="input" type="number" min="0" step="0.5" value={value.total ?? ''} onChange={(e) => set({ total: Number(e.target.value) })} />
             {touched && <FieldError message={errors[`detalles.${index}.total`]} />}
           </div>
         </div>

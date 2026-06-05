@@ -201,8 +201,8 @@ export default function AdminPartesPage() {
         return;
       }
 
-      if (Number(detalle.horas) <= 0 || Number(detalle.total) <= 0) {
-        pushToast('Horas y total deben ser mayores a 0', 'error');
+      if (Number(detalle.horas) < 0 || Number(detalle.total) < 0) {
+        pushToast('Las horas y el total deben ser 0 o mayores', 'error');
         return;
       }
     }

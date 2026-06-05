@@ -11,8 +11,8 @@ export function validateParteForm(fecha: string, detalles: ParteDetalle[]) {
     if (!detalle.trabajadorId) errors[`${prefix}.trabajadorId`] = 'El trabajador es obligatorio';
     if (!detalle.actividadId) errors[`${prefix}.actividadId`] = 'La actividad es obligatoria';
     if (!detalle.predioId) errors[`${prefix}.predioId`] = 'El predio es obligatorio';
-    if (!detalle.horas || detalle.horas <= 0) errors[`${prefix}.horas`] = 'Las horas deben ser mayores a 0';
-    if (!detalle.total || detalle.total <= 0) errors[`${prefix}.total`] = 'El total debe ser mayor a 0';
+    if (detalle.horas === null || detalle.horas === undefined || detalle.horas < 0) errors[`${prefix}.horas`] = 'Las horas deben ser 0 o mayores';
+    if (detalle.total === null || detalle.total === undefined || detalle.total < 0) errors[`${prefix}.total`] = 'El total debe ser 0 o mayor';
   });
 
   return errors;
