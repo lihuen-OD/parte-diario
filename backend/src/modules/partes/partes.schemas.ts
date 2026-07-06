@@ -38,4 +38,6 @@ export const partesQuerySchema = z.object({
   actividadId: z.coerce.number().int().positive().optional(),
   predioId: z.coerce.number().int().positive().optional(),
   creadoPorId: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });

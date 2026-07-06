@@ -1,9 +1,19 @@
 import { api } from './axios';
-import type { Rol } from '../types';
+import type { AdminParteRow, ParteDiario, Rol } from '../types';
 
 export async function fetchAdminPartes(params?: Record<string, string | number | undefined>) {
   const { data } = await api.get('/partes', { params });
   return data.partes;
+}
+
+export async function fetchAdminParteRows(params?: Record<string, string | number | undefined>): Promise<{ rows: AdminParteRow[]; pagination: { limit: number; offset: number; nextOffset: number; hasMore: boolean } }> {
+  const { data } = await api.get('/partes', { params });
+  return data;
+}
+
+export async function fetchAdminParte(id: number): Promise<ParteDiario> {
+  const { data } = await api.get(`/partes/${id}`);
+  return data.parte;
 }
 
 export async function fetchAdminTrabajadores() {

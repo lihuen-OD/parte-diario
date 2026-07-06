@@ -29,6 +29,12 @@ export const partesController = {
       throw new AppError(400, getZodErrorMessage(parsed.error));
     }
 
+    if (parsed.data.limit) {
+      const result = await partesService.listRows(parsed.data);
+      res.json(result);
+      return;
+    }
+
     const partes = await partesService.listAll(parsed.data);
     res.json({ partes });
   }),

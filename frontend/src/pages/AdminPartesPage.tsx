@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ParteDiario, Trabajador, Actividad, Predio, Usuario } from '../types';
-import { fetchAdminPartes, exportPartesXlsx, syncGoogleSheets, deleteParte, updateParte } from '../api/admin.api';
+import type { AdminParteRow, ParteDiario, Trabajador, Actividad, Predio, Usuario } from '../types';
+import { fetchAdminParte, fetchAdminParteRows, exportPartesXlsx, syncGoogleSheets, deleteParte, updateParte } from '../api/admin.api';
 import { fetchAdminActividades, fetchAdminPredios, fetchAdminTrabajadores, fetchUsers } from '../api/admin.api';
 import { useToast } from '../components/Toast';
 import { formatDateDisplay, formatDateTimeDisplay, toDateOnlyString } from '../utils/dateFormat';
@@ -28,6 +28,8 @@ type ParteFilters = {
   predioId: string;
   creadoPorId: string;
 };
+
+const PAGE_SIZE = 20;
 
 const emptyDetalle = (): ParteDetalleForm => ({
   trabajadorId: '',
@@ -66,7 +68,10 @@ function buildFormFromParte(parte: ParteDiario): ParteEditForm {
 
 export default function AdminPartesPage() {
   const { pushToast } = useToast();
-  const [partes, setPartes] = useState<ParteDiario[]>([]);
+  const [rows, setRows] = useState<AdminParteRow[]>([]);
+  const [nextOffset, setNextOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingRows, setLoadingRows] = useState(false);
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [predios, setPredios] = useState<Predio[]>([]);
@@ -83,32 +88,47 @@ export default function AdminPartesPage() {
     [usuarios],
   );
 
-  async function loadAll(nextFilters: ParteFilters = appliedFilters) {
-    const [allPartes, tr, act, pre, users] = await Promise.all([
-      fetchAdminPartes(Object.fromEntries(Object.entries(nextFilters).filter(([, value]) => value !== '')) as Record<string, string>),
+  function buildFilterParams(nextFilters: ParteFilters, offset = 0) {
+    return {
+      ...Object.fromEntries(Object.entries(nextFilters).filter(([, value]) => value !== '')),
+      limit: PAGE_SIZE,
+      offset,
+    } as Record<string, string | number>;
+  }
+
+  async function loadCatalogos() {
+    const [tr, act, pre, users] = await Promise.all([
       fetchAdminTrabajadores(),
       fetchAdminActividades(),
       fetchAdminPredios(),
       fetchUsers(),
     ]);
-    setPartes(allPartes);
     setTrabajadores(tr);
     setActividades(act);
     setPredios(pre);
     setUsuarios(users);
   }
 
-  useEffect(() => { void loadAll(); }, []);
+  async function loadRows(nextFilters: ParteFilters = appliedFilters, offset = 0, append = false) {
+    setLoadingRows(true);
+    try {
+      const result = await fetchAdminParteRows(buildFilterParams(nextFilters, offset));
+      setRows((current) => append ? [...current, ...result.rows] : result.rows);
+      setNextOffset(result.pagination.nextOffset);
+      setHasMore(result.pagination.hasMore);
+    } finally {
+      setLoadingRows(false);
+    }
+  }
 
-  const rows = useMemo(() => partes.flatMap((parte) => parte.detalles
-    .filter((detalle) => {
-      if (appliedFilters.trabajadorId && detalle.trabajadorId !== Number(appliedFilters.trabajadorId)) return false;
-      if (appliedFilters.actividadId && detalle.actividadId !== Number(appliedFilters.actividadId)) return false;
-      if (appliedFilters.predioId && detalle.predioId !== Number(appliedFilters.predioId)) return false;
-      return true;
-    })
-    .map((detalle, index) => ({ parte, detalle, key: `${parte.id}-${detalle.id ?? index}` }))),
-  [appliedFilters.actividadId, appliedFilters.predioId, appliedFilters.trabajadorId, partes]);
+  async function loadAll(nextFilters: ParteFilters = appliedFilters) {
+    await Promise.all([
+      loadRows(nextFilters),
+      loadCatalogos(),
+    ]);
+  }
+
+  useEffect(() => { void loadAll(); }, []);
 
   async function handleExport() {
     const blob = await exportPartesXlsx();
@@ -124,7 +144,7 @@ export default function AdminPartesPage() {
     try {
       const result = await syncGoogleSheets();
       pushToast(result.message ?? 'Sincronización completada', result.ok ? 'success' : 'info');
-      await loadAll();
+      await loadRows(appliedFilters);
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo sincronizar con Google Sheets';
       pushToast(message, 'error');
@@ -134,21 +154,22 @@ export default function AdminPartesPage() {
   async function handleDelete(id: number) {
     await deleteParte(id);
     pushToast('Parte eliminado', 'success');
-    await loadAll();
+    await loadRows(appliedFilters);
   }
 
   function applyFilters() {
     setAppliedFilters(filters);
-    void loadAll(filters);
+    void loadRows(filters);
   }
 
   function resetFilters() {
     setFilters(emptyFilters);
     setAppliedFilters(emptyFilters);
-    void loadAll(emptyFilters);
+    void loadRows(emptyFilters);
   }
 
-  function startEdit(parte: ParteDiario) {
+  async function startEdit(parteId: number) {
+    const parte = await fetchAdminParte(parteId);
     setSelected(parte);
     setEditMode(true);
     setEditForm(buildFormFromParte(parte));
@@ -223,7 +244,7 @@ export default function AdminPartesPage() {
       });
       pushToast('Parte actualizado', 'success');
       closeEditor();
-      await loadAll();
+      await loadRows(appliedFilters);
     } finally {
       setSavingEdit(false);
     }
@@ -306,7 +327,7 @@ export default function AdminPartesPage() {
             {detalle.observaciones ? <div className="muted">{detalle.observaciones}</div> : null}
             <div className="muted">Carga: {formatDateTimeDisplay(parte.createdAt)}</div>
             <div className="form-actions">
-              <button className="btn btn-secondary" onClick={() => startEdit(parte)}>Editar</button>
+              <button className="btn btn-secondary" onClick={() => void startEdit(parte.id)}>Editar</button>
               <button className="btn btn-danger" onClick={() => void handleDelete(parte.id)}>Eliminar</button>
             </div>
           </div>
@@ -335,7 +356,7 @@ export default function AdminPartesPage() {
                 <td>{formatDateTimeDisplay(parte.createdAt)}</td>
                 <td>
                   <div style={{ display: 'grid', gap: 8 }}>
-                    <button className="btn btn-secondary" onClick={() => startEdit(parte)}>Editar</button>
+                    <button className="btn btn-secondary" onClick={() => void startEdit(parte.id)}>Editar</button>
                     <button className="btn btn-danger" onClick={() => void handleDelete(parte.id)}>Eliminar</button>
                   </div>
                 </td>
@@ -344,6 +365,20 @@ export default function AdminPartesPage() {
           </tbody>
         </table>
       </div>
+
+      {rows.length === 0 && !loadingRows ? (
+        <div className="card" style={{ padding: 16 }}>
+          <span className="muted">No hay partes para mostrar.</span>
+        </div>
+      ) : null}
+
+      {hasMore ? (
+        <div className="form-actions" style={{ justifyContent: 'center' }}>
+          <button className="btn btn-secondary" onClick={() => void loadRows(appliedFilters, nextOffset, true)} disabled={loadingRows}>
+            {loadingRows ? 'Cargando...' : 'Cargar más'}
+          </button>
+        </div>
+      ) : null}
 
       {selected && editMode && (
         <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>

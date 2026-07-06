@@ -61,6 +61,42 @@ function serializeParte(parte: any) {
   };
 }
 
+function serializeParteRow(detalle: any) {
+  const parte = detalle.parteDiario;
+
+  return {
+    key: `${parte.id}-${detalle.id}`,
+    parte: {
+      id: parte.id,
+      localId: parte.localId,
+      fecha: toDateOnlyString(parte.fecha),
+      dia: parte.dia,
+      creadoPorId: parte.creadoPorId,
+      estadoSync: parte.estadoSync,
+      syncedToGoogleSheet: parte.syncedToGoogleSheet,
+      googleSheetRowId: parte.googleSheetRowId,
+      createdAt: parte.createdAt,
+      updatedAt: parte.updatedAt,
+      creadoPor: parte.creadoPor,
+    },
+    detalle: {
+      id: detalle.id,
+      parteDiarioId: detalle.parteDiarioId,
+      trabajadorId: detalle.trabajadorId,
+      actividadId: detalle.actividadId,
+      predioId: detalle.predioId,
+      horas: toNumber(detalle.horas),
+      total: toNumber(detalle.total),
+      observaciones: detalle.observaciones,
+      createdAt: detalle.createdAt,
+      updatedAt: detalle.updatedAt,
+      trabajador: detalle.trabajador,
+      actividad: detalle.actividad,
+      predio: detalle.predio,
+    },
+  };
+}
+
 async function validateDetalleCatalogs(detalles: Array<{ trabajadorId: number; actividadId: number; predioId: number }>) {
   for (const detalle of detalles) {
     const [trabajador, actividad, predio] = await Promise.all([
@@ -168,6 +204,62 @@ export const partesService = {
     });
 
     return partes.map(serializeParte);
+  },
+
+  async listRows(filters: { fechaDesde?: string; fechaHasta?: string; trabajadorId?: number; actividadId?: number; predioId?: number; creadoPorId?: number; limit?: number; offset?: number }) {
+    const limit = filters.limit ?? 20;
+    const offset = filters.offset ?? 0;
+
+    const detalles = await prisma.parteDiarioDetalle.findMany({
+      where: {
+        ...(filters.trabajadorId ? { trabajadorId: filters.trabajadorId } : {}),
+        ...(filters.actividadId ? { actividadId: filters.actividadId } : {}),
+        ...(filters.predioId ? { predioId: filters.predioId } : {}),
+        parteDiario: {
+          fecha: getDateRange(filters.fechaDesde, filters.fechaHasta),
+          ...(filters.creadoPorId ? { creadoPorId: filters.creadoPorId } : {}),
+        },
+      },
+      orderBy: [
+        { parteDiario: { fecha: 'desc' } },
+        { parteDiario: { createdAt: 'desc' } },
+        { id: 'asc' },
+      ],
+      skip: offset,
+      take: limit + 1,
+      include: {
+        trabajador: true,
+        actividad: true,
+        predio: true,
+        parteDiario: {
+          include: {
+            creadoPor: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true,
+                rol: true,
+                activo: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const pageItems = detalles.slice(0, limit);
+
+    return {
+      rows: pageItems.map(serializeParteRow),
+      pagination: {
+        limit,
+        offset,
+        nextOffset: offset + pageItems.length,
+        hasMore: detalles.length > limit,
+      },
+    };
   },
 
   async getById(id: number) {

@@ -45,4 +45,10 @@ export type ParteDiario = {
   detalles: ParteDetalle[];
 };
 
+export type AdminParteRow = {
+  key: string;
+  parte: Omit<ParteDiario, 'detalles'>;
+  detalle: ParteDetalle;
+};
+
 export type CatalogoKey = 'trabajadores' | 'actividades' | 'predios';
